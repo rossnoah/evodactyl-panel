@@ -1,6 +1,6 @@
 import { Form, Formik } from 'formik';
 import { useEffect, useState } from 'react';
-import { Link, useHistory } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 import tw from 'twin.macro';
 import { object, string } from 'yup';
@@ -23,10 +23,9 @@ import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
 import useFlash from '@/plugins/useFlash';
 
 const NestsContainer = () => {
-    const history = useHistory();
     const { addFlash, clearFlashes, clearAndAddHttpError } = useFlash();
     const [showImportModal, setShowImportModal] = useState(false);
-    const [importFile, setImportFile] = useState<File | null>(null);
+    const [importFiles, setImportFiles] = useState<File[]>([]);
     const [importNestId, setImportNestId] = useState<number | null>(null);
     const [importing, setImporting] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -58,29 +57,58 @@ const NestsContainer = () => {
             .finally(() => setSubmitting(false));
     };
 
-    const handleImport = () => {
-        if (!importFile || !importNestId) return;
+    const readFileAsText = (file: File) =>
+        new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(reader.error ?? new Error(`Failed to read ${file.name}.`));
+            reader.readAsText(file);
+        });
+
+    const handleImport = async () => {
+        if (importFiles.length === 0 || !importNestId) return;
         setImporting(true);
         clearFlashes('admin:nests');
-        const reader = new FileReader();
-        reader.onload = () => {
-            importEgg(importNestId, reader.result as string)
-                .then((egg) => {
-                    setShowImportModal(false);
-                    setImportFile(null);
-                    setImportNestId(null);
-                    history.push(`/admin/nests/${importNestId}/eggs/${egg.id}`);
-                })
-                .catch((error) => clearAndAddHttpError({ key: 'admin:nests', error }))
-                .finally(() => setImporting(false));
-        };
-        reader.readAsText(importFile);
+
+        const results = await Promise.allSettled(
+            importFiles.map(async (file) => {
+                const content = await readFileAsText(file);
+                return importEgg(importNestId, content);
+            }),
+        );
+
+        await mutate();
+
+        const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+        const successCount = results.length - failures.length;
+
+        setImporting(false);
+        setShowImportModal(false);
+        setImportFiles([]);
+        setImportNestId(null);
+
+        if (failures.length === 0) {
+            addFlash({
+                key: 'admin:nests',
+                type: 'success',
+                message: successCount === 1 ? 'Egg imported successfully.' : `Imported ${successCount} eggs.`,
+            });
+        } else if (successCount === 0) {
+            clearAndAddHttpError({ key: 'admin:nests', error: failures[0].reason });
+        } else {
+            clearAndAddHttpError({ key: 'admin:nests', error: failures[0].reason });
+            addFlash({
+                key: 'admin:nests',
+                type: 'warning',
+                message: `Imported ${successCount} of ${results.length} eggs. ${failures.length} failed.`,
+            });
+        }
     };
 
     const tools = (
         <div css={tw`flex items-center gap-2`}>
             <Button color={'green'} size={'xsmall'} onClick={() => setShowImportModal(true)}>
-                Import Egg
+                Import Eggs
             </Button>
             <Link to={'/admin/nests/egg/new'}>
                 <Button color={'green'} size={'xsmall'}>
@@ -148,32 +176,35 @@ const NestsContainer = () => {
                 visible={showImportModal}
                 onDismissed={() => {
                     setShowImportModal(false);
-                    setImportFile(null);
+                    setImportFiles([]);
                     setImportNestId(null);
                 }}
             >
                 <SpinnerOverlay visible={importing} />
-                <h2 css={tw`text-2xl mb-6`}>Import an Egg</h2>
+                <h2 css={tw`text-2xl mb-6`}>Import Eggs</h2>
                 <div css={tw`mb-4`}>
-                    <label css={tw`text-xs uppercase text-neutral-400 block mb-1`}>Egg File</label>
+                    <label css={tw`text-xs uppercase text-neutral-400 block mb-1`}>Egg Files</label>
                     <input
                         type='file'
                         accept='.json,application/json'
+                        multiple
                         css={tw`text-sm text-neutral-300`}
                         onChange={(e) => {
-                            const file = e.target.files?.[0] || null;
-                            if (file && file.size > 1000 * 1024) {
+                            const files = Array.from(e.target.files ?? []);
+                            const oversized = files.find((f) => f.size > 1000 * 1024);
+                            if (oversized) {
                                 clearAndAddHttpError({
                                     key: 'admin:nests',
-                                    error: new Error('File must be under 1000KB.'),
+                                    error: new Error(`${oversized.name} must be under 1000KB.`),
                                 });
+                                setImportFiles([]);
                                 return;
                             }
-                            setImportFile(file);
+                            setImportFiles(files);
                         }}
                     />
                     <p css={tw`text-xs text-neutral-500 mt-1`}>
-                        Select the <code>.json</code> file for the new egg that you wish to import.
+                        Select one or more <code>.json</code> files to import as new eggs.
                     </p>
                 </div>
                 <div css={tw`mb-6`}>
@@ -200,7 +231,7 @@ const NestsContainer = () => {
                         type={'button'}
                         onClick={() => {
                             setShowImportModal(false);
-                            setImportFile(null);
+                            setImportFiles([]);
                             setImportNestId(null);
                         }}
                         css={tw`border-transparent`}
@@ -209,10 +240,10 @@ const NestsContainer = () => {
                     </Button>
                     <Button
                         color={'primary'}
-                        disabled={!importFile || !importNestId || importing}
+                        disabled={importFiles.length === 0 || !importNestId || importing}
                         onClick={handleImport}
                     >
-                        Import
+                        {importFiles.length > 1 ? `Import ${importFiles.length} Eggs` : 'Import'}
                     </Button>
                 </div>
             </Modal>

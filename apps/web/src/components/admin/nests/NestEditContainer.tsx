@@ -32,6 +32,7 @@ const NestEditContainer = () => {
     const history = useHistory();
     const { addFlash, clearFlashes, clearAndAddHttpError } = useFlash();
     const [showDelete, setShowDelete] = useState(false);
+    const [importing, setImporting] = useState(false);
 
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -39,24 +40,52 @@ const NestEditContainer = () => {
         fileInputRef.current?.click();
     };
 
-    const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const readFileAsText = (file: File) =>
+        new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(reader.error ?? new Error(`Failed to read ${file.name}.`));
+            reader.readAsText(file);
+        });
 
-        const reader = new FileReader();
-        reader.onload = () => {
-            const content = reader.result as string;
-            clearFlashes('admin:nest');
-            importEgg(Number(nestId), content)
-                .then(() => {
-                    addFlash({ key: 'admin:nest', type: 'success', message: 'Egg imported successfully.' });
-                    mutate();
-                })
-                .catch((error) => clearAndAddHttpError({ key: 'admin:nest', error }));
-        };
-        reader.readAsText(file);
-        // Reset so the same file can be re-selected
+    const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        // Reset so the same files can be re-selected
         e.target.value = '';
+        if (files.length === 0) return;
+
+        clearFlashes('admin:nest');
+        setImporting(true);
+
+        const results = await Promise.allSettled(
+            files.map(async (file) => {
+                const content = await readFileAsText(file);
+                return importEgg(Number(nestId), content);
+            }),
+        );
+
+        await mutate();
+        setImporting(false);
+
+        const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+        const successCount = results.length - failures.length;
+
+        if (failures.length === 0) {
+            addFlash({
+                key: 'admin:nest',
+                type: 'success',
+                message: successCount === 1 ? 'Egg imported successfully.' : `Imported ${successCount} eggs.`,
+            });
+        } else if (successCount === 0) {
+            clearAndAddHttpError({ key: 'admin:nest', error: failures[0].reason });
+        } else {
+            clearAndAddHttpError({ key: 'admin:nest', error: failures[0].reason });
+            addFlash({
+                key: 'admin:nest',
+                type: 'warning',
+                message: `Imported ${successCount} of ${results.length} eggs. ${failures.length} failed.`,
+            });
+        }
     };
 
     const {
@@ -181,11 +210,13 @@ const NestEditContainer = () => {
                         type={'file'}
                         ref={fileInputRef}
                         accept={'.json'}
+                        multiple
                         css={tw`hidden`}
                         onChange={handleFileSelected}
                     />
                     <AdminBox
                         title={'Eggs'}
+                        css={tw`relative`}
                         tools={
                             <div css={tw`flex gap-2`}>
                                 <Button color={'primary'} size={'xsmall'} onClick={handleImportEgg}>
@@ -203,6 +234,7 @@ const NestEditContainer = () => {
                         }
                         noPadding
                     >
+                        <SpinnerOverlay visible={importing} />
                         {nest.eggs && nest.eggs.length > 0 ? (
                             <AdminTable>
                                 <AdminTableHead>
