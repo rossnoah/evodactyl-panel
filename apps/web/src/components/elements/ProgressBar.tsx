@@ -16,6 +16,7 @@ type Timer = ReturnType<typeof setTimeout>;
 const ProgressBar = () => {
     const interval = useRef<Timer>(null) as React.MutableRefObject<Timer>;
     const timeout = useRef<Timer>(null) as React.MutableRefObject<Timer>;
+    const nodeRef = useRef<HTMLDivElement>(null);
     const [visible, setVisible] = useState(false);
     const progress = useStoreState((state) => state.progress.progress);
     const continuous = useStoreState((state) => state.progress.continuous);
@@ -60,8 +61,8 @@ const ProgressBar = () => {
 
     return (
         <div css={tw`w-full fixed`} style={{ height: '2px' }}>
-            <CSSTransition timeout={150} appear in={visible} unmountOnExit classNames={'fade'}>
-                <BarFill style={{ width: progress === undefined ? '100%' : `${progress}%` }} />
+            <CSSTransition nodeRef={nodeRef} timeout={150} appear in={visible} unmountOnExit classNames={'fade'}>
+                <BarFill ref={nodeRef} style={{ width: progress === undefined ? '100%' : `${progress}%` }} />
             </CSSTransition>
         </div>
     );
