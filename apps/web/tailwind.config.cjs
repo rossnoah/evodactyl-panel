@@ -13,6 +13,9 @@ const gray = {
     900: 'hsl(210, 24%, 16%)',
 };
 
+// Kept as .cjs because twin.macro's config loader uses require() and cannot
+// load an ES module. The `.cjs` extension overrides the package's
+// `"type": "module"` default.
 module.exports = {
     content: [
         './src/**/*.{js,ts,tsx}',
@@ -50,5 +53,5 @@ module.exports = {
         require('@tailwindcss/forms')({
             strategy: 'class',
         }),
-    ]
+    ],
 };

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "APP_ENV=development bun run --watch src/index.ts",
+    "preview": "APP_ENV=production bun run src/index.ts",
     "start": "bun run src/index.ts",
     "cli": "bun run src/cli/index.ts",
     "build": "echo 'no build step — bun runs TS directly'",

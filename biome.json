@@ -16,9 +16,6 @@
       "!**/*.min.js",
       "!apps/web/public",
       "!apps/web/resources/views",
-      "!apps/web/babel.config.js",
-      "!apps/web/tailwind.config.js",
-      "!apps/web/webpack.config.js",
       "!packages/db/src/generated",
       "!**/.prisma"
     ]

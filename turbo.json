@@ -18,6 +18,11 @@
       "persistent": true,
       "dependsOn": ["@pterodactyl/db#generate"]
     },
+    "preview": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^build", "@pterodactyl/web#build", "@pterodactyl/db#generate"]
+    },
     "test": {
       "dependsOn": ["^build", "@pterodactyl/db#generate"],
       "outputs": ["coverage/**"]

@@ -12,6 +12,7 @@
   },
   "scripts": {
     "dev": "turbo run dev --filter=@pterodactyl/api",
+    "preview": "turbo run preview --filter=@pterodactyl/api",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
