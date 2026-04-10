@@ -45,7 +45,7 @@ export abstract class BaseTransformer {
      * Create a transformer instance with the request set.
      */
     static fromRequest<T extends BaseTransformer>(this: new () => T, request: Request): T {
-        const instance = new BaseTransformer();
+        const instance = new this();
         instance.setRequest(request);
         return instance;
     }
