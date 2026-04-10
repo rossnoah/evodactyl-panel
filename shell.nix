@@ -1,16 +1,10 @@
-{
-  composer ? null,
-  phpWithExtensions ? null,
-  pkgs ? import <nixpkgs> {},
-}:
+{pkgs ? import <nixpkgs> {}}:
 with pkgs;
-  mkShell rec {
+  mkShell {
     buildInputs = [
-      alejandra
-      composer
-      nodejs_18
-      nodePackages.yarn
-      phpWithExtensions
+      bun
+      mysql80
+      redis
     ];
 
     shellHook = ''

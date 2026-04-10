@@ -1,0 +1,39 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "stream",
+  "globalDependencies": [".env", "tsconfig.base.json"],
+  "globalEnv": [
+    "NODE_ENV",
+    "APP_ENV",
+    "APP_DEBUG",
+    "APP_KEY",
+    "DATABASE_URL"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build", "@pterodactyl/db#generate"],
+      "outputs": ["dist/**", "build/**", ".next/**", "!.next/cache/**"]
+    },
+    "@pterodactyl/db#generate": {
+      "cache": true,
+      "inputs": ["prisma/schema.prisma"],
+      "outputs": ["src/generated/**", "node_modules/.prisma/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["@pterodactyl/db#generate"]
+    },
+    "test": {
+      "dependsOn": ["^build", "@pterodactyl/db#generate"],
+      "outputs": ["coverage/**"]
+    },
+    "lint": {
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["@pterodactyl/db#generate"],
+      "outputs": []
+    }
+  }
+}

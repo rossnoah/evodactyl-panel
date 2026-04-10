@@ -1,39 +1,32 @@
-/vendor
 *.DS_Store*
+.env*
 !.env.ci
 !.env.example
-.env*
 .vagrant/*
 .vscode/*
-storage/framework/*
 /.idea
 /nbproject
 /.direnv
 
 node_modules
 *.log
-_ide_helper.php
-_ide_helper_models.php
-.phpstorm.meta.php
-.yarn
-public/assets/manifest.json
 
-# For local development with docker
-# Remove if we ever put the Dockerfile in the repo
+# Build outputs
+apps/web/dist
+apps/api/dist
+.turbo
+
+# Bun
+bun.lockb
+
+# Docker local dev (not the example compose file)
 .dockerignore
 docker-compose.*
 !docker-compose.example.yml
 !docker-compose.example.yaml
 
-# for image related files
-misc
-.php-cs-fixer.cache
+# Misc
 coverage.xml
-resources/lang/locales.js
-.phpunit.result.cache
-
-/public/build
-/public/hot
 result
-
 .claude/
+plans/

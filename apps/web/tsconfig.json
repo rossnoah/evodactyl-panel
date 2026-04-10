@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "es2020",
+    "jsx": "react-jsx",
+    "moduleResolution": "node",
+    "lib": ["es2020", "dom", "dom.iterable"],
+    "noEmit": true,
+    "sourceMap": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@definitions/*": ["./src/api/definitions/*"],
+      "@feature/*": ["./src/components/server/features/*"]
+    },
+    "plugins": [
+      {
+        "name": "typescript-plugin-tw-template"
+      }
+    ],
+    "types": [],
+    "typeRoots": ["node_modules/@types", "../../node_modules/@types"]
+  },
+  "include": ["./src/**/*"],
+  "exclude": ["node_modules"]
+}
