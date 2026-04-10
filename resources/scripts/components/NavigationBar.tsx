@@ -68,9 +68,9 @@ export default () => {
                     </Tooltip>
                     {rootAdmin && (
                         <Tooltip placement={'bottom'} content={'Admin'}>
-                            <a href={'/admin'} rel={'noreferrer'}>
+                            <NavLink to={'/admin'}>
                                 <FontAwesomeIcon icon={faCogs} />
-                            </a>
+                            </NavLink>
                         </Tooltip>
                     )}
                     <Tooltip placement={'bottom'} content={'Account Settings'}>

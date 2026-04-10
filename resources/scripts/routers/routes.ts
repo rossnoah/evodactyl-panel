@@ -35,11 +35,18 @@ interface ServerRouteDefinition extends RouteDefinition {
     permission: string | string[] | null;
 }
 
+interface AdminRouteDefinition {
+    path: string;
+    name: string;
+}
+
 interface Routes {
     // All of the routes available under "/account"
     account: RouteDefinition[];
     // All of the routes available under "/server/:id"
     server: ServerRouteDefinition[];
+    // All of the admin navigation links under "/admin"
+    admin: AdminRouteDefinition[];
 }
 
 export default {
@@ -140,5 +147,16 @@ export default {
             name: 'Activity',
             component: ServerActivityLogContainer,
         },
+    ],
+    admin: [
+        { path: '/admin', name: 'Dashboard' },
+        { path: '/admin/settings', name: 'Settings' },
+        { path: '/admin/users', name: 'Users' },
+        { path: '/admin/servers', name: 'Servers' },
+        { path: '/admin/nodes', name: 'Nodes' },
+        { path: '/admin/nests', name: 'Nests' },
+        { path: '/admin/locations', name: 'Locations' },
+        { path: '/admin/databases', name: 'Databases' },
+        { path: '/admin/mounts', name: 'Mounts' },
     ],
 } as Routes;
