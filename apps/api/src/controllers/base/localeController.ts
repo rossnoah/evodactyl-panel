@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Request, Response } from 'express';
+import type { Request, Response } from '@/types/express.js';
 
 const LANG_PATH = path.resolve(import.meta.dir, '../../../..', 'resources', 'lang');
 

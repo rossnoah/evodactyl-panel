@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { prisma } from '../../../prisma/client.js';
 import { fractal } from '../../../serializers/fractal.js';
 import { createLocation } from '../../../services/locations/locationCreationService.js';
@@ -76,7 +76,8 @@ export const view = async (req: Request, res: Response, next: NextFunction) => {
         const location = await prisma.locations.findUnique({ where: { id: locationId } });
 
         if (!location) {
-            return res.status(404).json({ error: 'Location not found.' });
+            res.status(404).json({ error: 'Location not found.' });
+            return;
         }
 
         const transformer = LocationTransformer.fromRequest(req);
@@ -124,7 +125,8 @@ export const update = async (req: Request, res: Response, next: NextFunction) =>
         const locationId = parseInt(req.params.id, 10);
         const existing = await prisma.locations.findUnique({ where: { id: locationId } });
         if (!existing) {
-            return res.status(404).json({ error: 'Location not found.' });
+            res.status(404).json({ error: 'Location not found.' });
+            return;
         }
 
         const validated = validateUpdateLocation(req.body);

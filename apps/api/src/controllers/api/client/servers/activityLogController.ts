@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { AuthorizationException } from '../../../../errors/index.js';
 import { ACTION_ACTIVITY_READ } from '../../../../permissions.js';
 import { prisma } from '../../../../prisma/client.js';

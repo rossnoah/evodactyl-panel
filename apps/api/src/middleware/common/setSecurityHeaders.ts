@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 
 /**
  * Set security headers on all responses.

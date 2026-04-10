@@ -50,7 +50,7 @@ export class MountTransformer extends BaseTransformer {
         const nodes = pivots.map((p: any) => p.nodes);
         const { NodeTransformer } = await import('./nodeTransformer.js');
         const transformer = this.makeTransformer(NodeTransformer);
-        const items = nodes.map((n: any) => transformer.transform(n));
+        const items = await Promise.all(nodes.map((n: any) => transformer.transform(n)));
         return serializeCollection('node', items);
     }
 

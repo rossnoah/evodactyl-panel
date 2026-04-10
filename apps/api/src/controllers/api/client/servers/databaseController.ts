@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Request, Response } from '@/types/express.js';
 import { ModelNotFoundException } from '../../../../errors/index.js';
 import { decodeHashid } from '../../../../lib/hashids.js';
 import { prisma } from '../../../../prisma/client.js';

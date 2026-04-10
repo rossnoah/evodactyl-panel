@@ -76,7 +76,7 @@ export class DaemonFileRepository extends DaemonRepository {
             throw new DaemonConnectionException(`Failed to list directory: ${response.status} ${response.statusText}`);
         }
 
-        return response.json();
+        return (await response.json()) as any[];
     }
 
     /**

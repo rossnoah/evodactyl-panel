@@ -118,7 +118,7 @@ model backups {
   uuid          String    @unique(map: "backups_uuid_unique") @db.Char(36)
   upload_id     String?   @db.Text
   is_successful Boolean   @default(false)
-  is_locked     Int       @default(0) @db.UnsignedTinyInt
+  is_locked     Boolean   @default(false)
   name          String
   ignored_files String    @db.Text
   disk          String
@@ -364,15 +364,17 @@ model notifications {
   @@index([notifiable_type, notifiable_id], map: "notifications_notifiable_type_notifiable_id_index")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+// The underlying MySQL table has no PRIMARY KEY, but the application treats
+// `email` as the logical key (forgot/reset flow deletes by email before
+// inserting), so we expose it as @id at the Prisma level. This is a
+// client-side hint only — no migration is generated.
 model password_resets {
-  email      String
+  email      String   @id
   token      String
   created_at DateTime @db.Timestamp(0)
 
   @@index([email], map: "password_resets_email_index")
   @@index([token], map: "password_resets_token_index")
-  @@ignore
 }
 
 model recovery_tokens {
@@ -571,7 +573,7 @@ model users {
   remember_token        String?
   language              String            @default("en") @db.Char(5)
   root_admin            Int               @default(0) @db.UnsignedTinyInt
-  use_totp              Int               @db.UnsignedTinyInt
+  use_totp              Boolean           @default(false)
   totp_secret           String?           @db.Text
   totp_authenticated_at DateTime?         @db.Timestamp(0)
   gravatar              Boolean           @default(true)

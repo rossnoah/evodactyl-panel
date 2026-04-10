@@ -72,7 +72,7 @@ export async function createApiKey(
 
     const client = tx ?? prisma;
     const apiKey = await client.api_keys.create({
-        data: createData,
+        data: createData as Prisma.api_keysUncheckedCreateInput,
     });
 
     return { apiKey, plainTextToken: identifier + plainToken };

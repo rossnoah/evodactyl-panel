@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { BadRequestHttpException, TooManyRequestsHttpException, ValidationException } from '../../../errors/index.js';
 import { verifyPassword } from '../../../lib/password.js';
 import { fractal } from '../../../serializers/fractal.js';

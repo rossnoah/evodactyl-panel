@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { DisplayException, ValidationException } from '../../errors/index.js';
 import { hashPassword } from '../../lib/password.js';
 import { prisma } from '../../prisma/client.js';

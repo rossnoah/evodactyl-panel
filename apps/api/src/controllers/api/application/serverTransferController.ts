@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { prisma } from '../../../prisma/client.js';
 import { DaemonTransferRepository } from '../../../repositories/wings/daemonTransferRepository.js';
 import { NodeJWTService } from '../../../services/nodes/nodeJwtService.js';
@@ -17,7 +17,8 @@ export const transfer = async (req: Request, res: Response, next: NextFunction) 
         const { node_id, allocation_id, allocation_additional } = req.body;
 
         if (!node_id || !allocation_id) {
-            return res.status(422).json({ error: 'node_id and allocation_id are required.' });
+            res.status(422).json({ error: 'node_id and allocation_id are required.' });
+            return;
         }
 
         const server = await prisma.servers.findUniqueOrThrow({
@@ -30,7 +31,8 @@ export const transfer = async (req: Request, res: Response, next: NextFunction) 
             where: { server_id: serverId, successful: null },
         });
         if (existingTransfer) {
-            return res.status(409).json({ error: 'A transfer is already in progress for this server.' });
+            res.status(409).json({ error: 'A transfer is already in progress for this server.' });
+            return;
         }
 
         // Verify destination node exists and is different
@@ -39,7 +41,8 @@ export const transfer = async (req: Request, res: Response, next: NextFunction) 
         });
 
         if (targetNode.id === server.node_id) {
-            return res.status(422).json({ error: 'Cannot transfer to the same node.' });
+            res.status(422).json({ error: 'Cannot transfer to the same node.' });
+            return;
         }
 
         // Verify the allocation belongs to the target node and is unassigned
@@ -47,7 +50,8 @@ export const transfer = async (req: Request, res: Response, next: NextFunction) 
             where: { id: Number(allocation_id), node_id: targetNode.id, server_id: null },
         });
         if (!targetAllocation) {
-            return res.status(422).json({ error: 'The specified allocation is not available on the target node.' });
+            res.status(422).json({ error: 'The specified allocation is not available on the target node.' });
+            return;
         }
 
         const additionalAllocations: number[] = (allocation_additional || []).map(Number);
@@ -70,9 +74,10 @@ export const transfer = async (req: Request, res: Response, next: NextFunction) 
                 : targetNode.disk + (targetNode.disk * targetNode.disk_overallocate) / 100;
 
         if (usedMemory + server.memory > memoryLimit || usedDisk + server.disk > diskLimit) {
-            return res
-                .status(400)
-                .json({ error: 'The target node does not have sufficient resources for this transfer.' });
+            res.status(400).json({
+                error: 'The target node does not have sufficient resources for this transfer.',
+            });
+            return;
         }
 
         // Get old additional allocations (all allocations except the primary one)
@@ -129,9 +134,10 @@ export const transfer = async (req: Request, res: Response, next: NextFunction) 
                 where: { id: { in: allNewAllocations }, server_id: server.id },
                 data: { server_id: null },
             });
-            return res
-                .status(502)
-                .json({ error: 'Failed to communicate with the source daemon to initiate transfer.' });
+            res.status(502).json({
+                error: 'Failed to communicate with the source daemon to initiate transfer.',
+            });
+            return;
         }
 
         res.status(204).send();

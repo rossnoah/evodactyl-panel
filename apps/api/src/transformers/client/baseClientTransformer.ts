@@ -37,8 +37,4 @@ export abstract class BaseClientTransformer extends BaseTransformer {
 
         return false;
     }
-
-    protected makeTransformer<T extends BaseClientTransformer>(TransformerClass: new () => T): T {
-        return super.makeTransformer(TransformerClass) as T;
-    }
 }

@@ -16,7 +16,7 @@ export async function createUser(data: {
     name_last: string;
     password?: string;
     language?: string;
-    root_admin?: boolean;
+    root_admin?: number;
 }): Promise<any> {
     let hashedPassword: string;
     let generateResetToken = false;
@@ -38,8 +38,8 @@ export async function createUser(data: {
             name_last: data.name_last,
             password: hashedPassword,
             language: data.language ?? 'en',
-            root_admin: data.root_admin ? 1 : 0,
-            use_totp: 0,
+            root_admin: data.root_admin ?? 0,
+            use_totp: false,
         },
     });
 

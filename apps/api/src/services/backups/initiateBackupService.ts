@@ -113,7 +113,7 @@ export class InitiateBackupService {
                     name: backupName,
                     ignored_files: JSON.stringify(this.ignoredFiles),
                     disk: defaultAdapter,
-                    is_locked: this.isLocked ? 1 : 0,
+                    is_locked: this.isLocked,
                 },
             });
         });

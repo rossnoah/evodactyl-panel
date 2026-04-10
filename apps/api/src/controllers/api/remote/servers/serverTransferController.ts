@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { ConflictHttpException, HttpForbiddenException } from '../../../../errors/index.js';
 import { prisma } from '../../../../prisma/client.js';
 import { DaemonServerRepository } from '../../../../repositories/wings/daemonServerRepository.js';

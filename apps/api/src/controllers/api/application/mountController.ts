@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { prisma } from '../../../prisma/client.js';
 import { fractal } from '../../../serializers/fractal.js';
 import { createMount } from '../../../services/mounts/mountCreationService.js';
@@ -48,7 +48,8 @@ export const view = async (req: Request, res: Response, next: NextFunction) => {
         const mount = await prisma.mounts.findUnique({ where: { id: mountId } });
 
         if (!mount) {
-            return res.status(404).json({ error: 'Mount not found.' });
+            res.status(404).json({ error: 'Mount not found.' });
+            return;
         }
 
         const transformer = MountTransformer.fromRequest(req);
@@ -95,7 +96,8 @@ export const update = async (req: Request, res: Response, next: NextFunction) =>
         const mountId = parseInt(req.params.id, 10);
         const existing = await prisma.mounts.findUnique({ where: { id: mountId } });
         if (!existing) {
-            return res.status(404).json({ error: 'Mount not found.' });
+            res.status(404).json({ error: 'Mount not found.' });
+            return;
         }
 
         const validated = updateMountSchema.parse(req.body);

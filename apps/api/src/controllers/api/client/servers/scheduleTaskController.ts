@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Request, Response } from '@/types/express.js';
 import { config } from '../../../../config/index.js';
 import {
     AuthorizationException,
@@ -81,11 +81,12 @@ export class ScheduleTaskController {
 
             return tx.tasks.create({
                 data: {
-                    schedule_id: schedule.id,
+                    schedule_id: schedule.id as number,
                     sequence_id: sequenceId,
-                    action: req.body.action,
-                    payload: req.body.payload ?? '',
+                    action: String(req.body.action),
+                    payload: String(req.body.payload ?? ''),
                     time_offset: parseInt(req.body.time_offset, 10) || 0,
+                    is_queued: false,
                     continue_on_failure: req.body.continue_on_failure ? 1 : 0,
                 },
             });

@@ -84,7 +84,7 @@ export class EnvironmentService {
         const envVars = config.pterodactyl.environmentVariables;
         for (const [key, objectPath] of Object.entries(envVars)) {
             const value = this.resolveProperty(server, objectPath);
-            variables[key] = value ?? '';
+            variables[key] = value == null ? '' : String(value);
         }
 
         // Process dynamically included environment variables

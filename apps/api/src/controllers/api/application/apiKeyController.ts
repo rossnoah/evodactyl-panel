@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { prisma } from '../../../prisma/client.js';
 import { createApiKey, KEY_TYPE_APPLICATION } from '../../../services/api/keyCreationService.js';
 

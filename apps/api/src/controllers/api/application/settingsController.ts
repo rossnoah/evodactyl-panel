@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { getAllSettings, updateSettings } from '../../../services/settings/settingsService.js';
 import { updateSettingsSchema } from '../../../validation/schemas/settings.js';
 

@@ -29,23 +29,27 @@ export class StartupModificationService {
 
             const results = await this.validatorService.setUserLevel(this.userLevel).handle(eggId, data.environment);
 
+            // server_variables has no unique constraint on (server_id,
+            // variable_id) at the DB level, so emulate upsert with a
+            // findFirst + create/update.
             for (const result of results) {
-                await prisma.server_variables.upsert({
-                    where: {
-                        server_id_variable_id: {
+                const existing = await prisma.server_variables.findFirst({
+                    where: { server_id: server.id, variable_id: result.id },
+                });
+                if (existing) {
+                    await prisma.server_variables.update({
+                        where: { id: existing.id },
+                        data: { variable_value: result.value ?? '' },
+                    });
+                } else {
+                    await prisma.server_variables.create({
+                        data: {
                             server_id: server.id,
                             variable_id: result.id,
+                            variable_value: result.value ?? '',
                         },
-                    },
-                    create: {
-                        server_id: server.id,
-                        variable_id: result.id,
-                        variable_value: result.value ?? '',
-                    },
-                    update: {
-                        variable_value: result.value ?? '',
-                    },
-                });
+                    });
+                }
             }
         }
 

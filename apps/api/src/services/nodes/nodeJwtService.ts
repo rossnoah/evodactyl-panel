@@ -96,7 +96,7 @@ export class NodeJWTService {
             // payload.iat (and leaves payload.nbf alone unless options.notBefore
             // is set), so we must NOT pass noTimestamp: true here — that option
             // deletes payload.iat.
-            header: header as SignOptions['header'],
+            header: header as unknown as SignOptions['header'],
         };
 
         if (this.expiresAt) {

@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { BadRequestHttpException } from '../../../../errors/index.js';
 import { prisma } from '../../../../prisma/client.js';
 import { fractal } from '../../../../serializers/fractal.js';
@@ -61,23 +61,26 @@ export const update = async (req: Request, res: Response, next: NextFunction) =>
 
         const original = variable.server_value;
 
-        // Upsert the server variable value
-        await prisma.server_variables.upsert({
-            where: {
-                server_id_variable_id: {
+        // server_variables has no unique constraint on (server_id,
+        // variable_id) at the DB level, so emulate upsert with a findFirst
+        // + create/update.
+        const existing = await prisma.server_variables.findFirst({
+            where: { server_id: server.id, variable_id: variable.id },
+        });
+        if (existing) {
+            await prisma.server_variables.update({
+                where: { id: existing.id },
+                data: { variable_value: value ?? '' },
+            });
+        } else {
+            await prisma.server_variables.create({
+                data: {
                     server_id: server.id,
                     variable_id: variable.id,
+                    variable_value: value ?? '',
                 },
-            },
-            create: {
-                server_id: server.id,
-                variable_id: variable.id,
-                variable_value: value ?? '',
-            },
-            update: {
-                variable_value: value ?? '',
-            },
-        });
+            });
+        }
 
         // Update the variable with the new server value for the response
         variable.server_value = value;

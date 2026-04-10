@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Request, Response } from '@/types/express.js';
 import { AuthorizationException, NotFoundHttpException } from '../../../../errors/index.js';
 import {
     ACTION_USER_CREATE,

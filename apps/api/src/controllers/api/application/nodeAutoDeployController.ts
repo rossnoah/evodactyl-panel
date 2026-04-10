@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { decrypt } from '../../../lib/encryption.js';
 import { prisma } from '../../../prisma/client.js';
 import { createApiKey, KEY_TYPE_APPLICATION } from '../../../services/api/keyCreationService.js';
@@ -15,13 +15,15 @@ export const generateDeployToken = async (req: Request, res: Response, next: Nex
 
         const node = await prisma.nodes.findUnique({ where: { id: nodeId } });
         if (!node) {
-            return res.status(404).json({ error: 'Node not found.' });
+            res.status(404).json({ error: 'Node not found.' });
+            return;
         }
 
         // Get the authenticated user's ID from session or API key
         const userId = (req as any).user?.id;
         if (!userId) {
-            return res.status(401).json({ error: 'Authentication required.' });
+            res.status(401).json({ error: 'Authentication required.' });
+            return;
         }
 
         // Look for an existing application API key with node read permission

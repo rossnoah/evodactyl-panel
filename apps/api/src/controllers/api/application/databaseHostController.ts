@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { prisma } from '../../../prisma/client.js';
 import { fractal } from '../../../serializers/fractal.js';
 import { createDatabaseHost } from '../../../services/databases/hosts/hostCreationService.js';
@@ -48,7 +48,8 @@ export const view = async (req: Request, res: Response, next: NextFunction) => {
         const host = await prisma.database_hosts.findUnique({ where: { id: hostId } });
 
         if (!host) {
-            return res.status(404).json({ error: 'Database host not found.' });
+            res.status(404).json({ error: 'Database host not found.' });
+            return;
         }
 
         const transformer = DatabaseHostTransformer.fromRequest(req);
@@ -95,7 +96,8 @@ export const update = async (req: Request, res: Response, next: NextFunction) =>
         const hostId = parseInt(req.params.id, 10);
         const existing = await prisma.database_hosts.findUnique({ where: { id: hostId } });
         if (!existing) {
-            return res.status(404).json({ error: 'Database host not found.' });
+            res.status(404).json({ error: 'Database host not found.' });
+            return;
         }
 
         const validated = updateDatabaseHostSchema.parse(req.body);

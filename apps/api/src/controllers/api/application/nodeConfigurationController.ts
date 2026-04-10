@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { config } from '../../../config/index.js';
 import { decrypt } from '../../../lib/encryption.js';
 import { prisma } from '../../../prisma/client.js';
@@ -18,7 +18,8 @@ export const getConfiguration = async (req: Request, res: Response, next: NextFu
         });
 
         if (!node) {
-            return res.status(404).json({ error: 'Node not found.' });
+            res.status(404).json({ error: 'Node not found.' });
+            return;
         }
 
         // Decrypt the daemon token

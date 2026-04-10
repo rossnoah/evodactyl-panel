@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { prisma } from '../../../prisma/client.js';
 import { ReinstallServerService } from '../../../services/servers/reinstallServerService.js';
 import { SuspensionService } from '../../../services/servers/suspensionService.js';
@@ -73,9 +73,10 @@ export const toggleInstall = async (req: Request, res: Response, next: NextFunct
         });
 
         if (server.status === 'install_failed') {
-            return res
-                .status(400)
-                .json({ error: 'This server is marked as having a failed installation and cannot be toggled.' });
+            res.status(400).json({
+                error: 'This server is marked as having a failed installation and cannot be toggled.',
+            });
+            return;
         }
 
         // If installed (status null), mark as installing. If installing, mark as installed.

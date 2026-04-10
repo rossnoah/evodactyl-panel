@@ -32,7 +32,7 @@ export class ProcessScheduleService {
             }),
             prisma.tasks.update({
                 where: { id: task.id },
-                data: { is_queued: 1 },
+                data: { is_queued: true },
             }),
         ]);
 
@@ -96,7 +96,7 @@ export class ProcessScheduleService {
         await prisma.$transaction([
             prisma.tasks.update({
                 where: { id: task.id },
-                data: { is_queued: 0 },
+                data: { is_queued: false },
             }),
             prisma.schedules.update({
                 where: { id: schedule.id },

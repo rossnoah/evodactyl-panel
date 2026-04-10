@@ -120,7 +120,7 @@ async function queueNextTask(task: any, manualRun: boolean): Promise<void> {
 
     await prisma.tasks.update({
         where: { id: nextTask.id },
-        data: { is_queued: 1 },
+        data: { is_queued: true },
     });
 
     // Execute with delay based on time_offset
@@ -155,6 +155,6 @@ async function markScheduleComplete(task: any): Promise<void> {
 async function markTaskNotQueued(task: any): Promise<void> {
     await prisma.tasks.update({
         where: { id: task.id },
-        data: { is_queued: 0 },
+        data: { is_queued: false },
     });
 }

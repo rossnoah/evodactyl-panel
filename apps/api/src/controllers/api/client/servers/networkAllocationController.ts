@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { DisplayException } from '../../../../errors/index.js';
 import { prisma } from '../../../../prisma/client.js';
 import { fractal } from '../../../../serializers/fractal.js';
@@ -48,7 +48,8 @@ export const update = async (req: Request, res: Response, next: NextFunction) =>
         });
 
         if (!allocation) {
-            return res.status(404).json({ error: 'Allocation not found.' });
+            res.status(404).json({ error: 'Allocation not found.' });
+            return;
         }
 
         const originalNotes = allocation.notes;
@@ -95,7 +96,8 @@ export const setPrimary = async (req: Request, res: Response, next: NextFunction
         });
 
         if (!allocation) {
-            return res.status(404).json({ error: 'Allocation not found.' });
+            res.status(404).json({ error: 'Allocation not found.' });
+            return;
         }
 
         await prisma.servers.update({
@@ -184,7 +186,8 @@ export const remove = async (req: Request, res: Response, next: NextFunction) =>
         });
 
         if (!allocation) {
-            return res.status(404).json({ error: 'Allocation not found.' });
+            res.status(404).json({ error: 'Allocation not found.' });
+            return;
         }
 
         // Unassign the allocation (don't actually delete it from the node)

@@ -96,8 +96,8 @@ export class ServerCreationService {
             where: { id: server.id },
             include: {
                 allocations: true,
-                egg: true,
-                node: true,
+                eggs: true,
+                nodes: true,
             },
         });
     }

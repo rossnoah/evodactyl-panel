@@ -1,4 +1,4 @@
-import type { Request } from 'express';
+import type { Request } from '@/types/express.js';
 
 /**
  * Base transformer for Application API responses.

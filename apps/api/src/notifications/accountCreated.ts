@@ -8,13 +8,13 @@ import { config } from '../config/index.js';
  * If a password reset token is provided, includes a setup link.
  */
 export async function sendAccountCreatedNotification(
-    user: { email: string; username: string; name_first: string; name_last?: string },
+    user: { email: string; username: string; name_first: string | null; name_last?: string | null },
     token: string | null = null,
 ): Promise<void> {
     const appName = config.app.name || 'Pterodactyl';
     const appUrl = config.app.url || 'http://localhost';
 
-    const name = user.name_first + (user.name_last ? ` ${user.name_last}` : '');
+    const name = (user.name_first ?? '') + (user.name_last ? ` ${user.name_last}` : '');
 
     const subject = `Account Created on ${appName}`;
     let _body = `Hello ${name}!\n\n`;

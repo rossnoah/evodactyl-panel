@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Request, Response } from 'express';
+import type { Request, Response } from '@/types/express.js';
 import { config } from '../../config/index.js';
 import { prisma } from '../../prisma/client.js';
 

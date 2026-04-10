@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { BadRequestHttpException, ValidationException } from '../../../errors/index.js';
 import { verifyPassword } from '../../../lib/password.js';
 import { prisma } from '../../../prisma/client.js';
@@ -92,7 +92,7 @@ export async function destroy(req: Request, res: Response, next: NextFunction): 
             where: { id: user.id },
             data: {
                 totp_authenticated_at: new Date(),
-                use_totp: 0,
+                use_totp: false,
             },
         });
 

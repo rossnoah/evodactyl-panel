@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Request, Response } from '@/types/express.js';
 import { prisma } from '../../../prisma/client.js';
 import { fractal } from '../../../serializers/fractal.js';
 import { createNest } from '../../../services/nests/nestCreationService.js';

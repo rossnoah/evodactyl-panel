@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { DaemonPowerRepository } from '../../../../repositories/wings/daemonPowerRepository.js';
 import { activityFromRequest } from '../../../../services/activity/activityLogService.js';
 

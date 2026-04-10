@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { DaemonConnectionException } from '../../../../errors/index.js';
 import { DaemonCommandRepository } from '../../../../repositories/wings/daemonCommandRepository.js';
 import { activityFromRequest } from '../../../../services/activity/activityLogService.js';

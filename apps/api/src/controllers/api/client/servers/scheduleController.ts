@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Request, Response } from '@/types/express.js';
 import { AuthorizationException, DisplayException, NotFoundHttpException } from '../../../../errors/index.js';
 import {
     ACTION_SCHEDULE_CREATE,
@@ -56,14 +56,15 @@ export class ScheduleController {
 
         const schedule = await prisma.schedules.create({
             data: {
-                server_id: server.id,
-                name: req.body.name,
-                cron_day_of_week: req.body.day_of_week,
-                cron_month: req.body.month,
-                cron_day_of_month: req.body.day_of_month,
-                cron_hour: req.body.hour,
-                cron_minute: req.body.minute,
+                server_id: server.id as number,
+                name: String(req.body.name ?? ''),
+                cron_day_of_week: String(req.body.day_of_week ?? '*'),
+                cron_month: String(req.body.month ?? '*'),
+                cron_day_of_month: String(req.body.day_of_month ?? '*'),
+                cron_hour: String(req.body.hour ?? '*'),
+                cron_minute: String(req.body.minute ?? '*'),
                 is_active: Boolean(req.body.is_active),
+                is_processing: false,
                 only_when_online: req.body.only_when_online ? 1 : 0,
                 next_run_at: nextRunAt,
             },

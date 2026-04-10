@@ -41,7 +41,7 @@ export async function makeUserCommand(args: string[]): Promise<number> {
             name_first: nameFirst,
             name_last: nameLast,
             password,
-            root_admin: rootAdmin,
+            root_admin: rootAdmin ? 1 : 0,
         });
 
         console.table([

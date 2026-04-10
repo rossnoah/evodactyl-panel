@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Request, Response } from '@/types/express.js';
 import { config } from '../../../../config/index.js';
 import { getConnectionAddress } from '../../../../lib/node.js';
 import { DaemonFileRepository } from '../../../../repositories/wings/daemonFileRepository.js';

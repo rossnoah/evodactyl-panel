@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { BadRequestHttpException } from '../../../../errors/index.js';
 import { prisma } from '../../../../prisma/client.js';
 import { activityFromRequest } from '../../../../services/activity/activityLogService.js';

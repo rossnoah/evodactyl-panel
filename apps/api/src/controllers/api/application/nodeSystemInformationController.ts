@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { DaemonConnectionException } from '../../../errors/index.js';
 import { prisma } from '../../../prisma/client.js';
 import { DaemonConfigurationRepository } from '../../../repositories/wings/daemonConfigurationRepository.js';
@@ -15,7 +15,8 @@ export const getSystemInformation = async (req: Request, res: Response, next: Ne
         const node = await prisma.nodes.findUnique({ where: { id: nodeId } });
 
         if (!node) {
-            return res.status(404).json({ error: 'Node not found.' });
+            res.status(404).json({ error: 'Node not found.' });
+            return;
         }
 
         const repository = new DaemonConfigurationRepository();
@@ -34,7 +35,8 @@ export const getSystemInformation = async (req: Request, res: Response, next: Ne
         });
     } catch (err) {
         if (err instanceof DaemonConnectionException) {
-            return res.status(502).json({ error: 'Unable to connect to the daemon.' });
+            res.status(502).json({ error: 'Unable to connect to the daemon.' });
+            return;
         }
         next(err);
     }

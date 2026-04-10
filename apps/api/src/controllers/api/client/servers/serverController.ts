@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { fractal } from '../../../../serializers/fractal.js';
 import { GetUserPermissionsService } from '../../../../services/servers/getUserPermissionsService.js';
 import { ClientServerTransformer } from '../../../../transformers/client/serverTransformer.js';

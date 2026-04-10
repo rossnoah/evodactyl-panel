@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Request, Response } from '@/types/express.js';
 import type { BaseTransformer } from '../transformers/application/baseTransformer.js';
 import {
     mergeIncludes,

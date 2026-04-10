@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { prisma } from '../../../prisma/client.js';
 import { fractal } from '../../../serializers/fractal.js';
 import { deleteAllocation } from '../../../services/allocations/allocationDeletionService.js';
@@ -75,7 +75,8 @@ export const store = async (req: Request, res: Response, next: NextFunction) => 
         // Verify the node exists
         const node = await prisma.nodes.findUnique({ where: { id: nodeId } });
         if (!node) {
-            return res.status(404).json({ error: 'Node not found.' });
+            res.status(404).json({ error: 'Node not found.' });
+            return;
         }
 
         const validated = validateStoreAllocation(req.body);
@@ -112,10 +113,12 @@ export const updateAlias = async (req: Request, res: Response, next: NextFunctio
         const alias = req.body.alias ?? null;
 
         if (alias !== null && typeof alias !== 'string') {
-            return res.status(422).json({ error: 'Alias must be a string or null.' });
+            res.status(422).json({ error: 'Alias must be a string or null.' });
+            return;
         }
         if (alias !== null && alias.length > 191) {
-            return res.status(422).json({ error: 'Alias must be 191 characters or fewer.' });
+            res.status(422).json({ error: 'Alias must be 191 characters or fewer.' });
+            return;
         }
 
         const allocation = await prisma.allocations.findFirst({
@@ -123,7 +126,8 @@ export const updateAlias = async (req: Request, res: Response, next: NextFunctio
         });
 
         if (!allocation) {
-            return res.status(404).json({ error: 'Allocation not found.' });
+            res.status(404).json({ error: 'Allocation not found.' });
+            return;
         }
 
         await prisma.allocations.update({
@@ -147,7 +151,8 @@ export const bulkRemove = async (req: Request, res: Response, next: NextFunction
         const ids: number[] = req.body.ids;
 
         if (!Array.isArray(ids) || ids.length === 0) {
-            return res.status(422).json({ error: 'An array of allocation IDs is required.' });
+            res.status(422).json({ error: 'An array of allocation IDs is required.' });
+            return;
         }
 
         // Verify all allocations belong to this node and are unassigned
@@ -156,12 +161,14 @@ export const bulkRemove = async (req: Request, res: Response, next: NextFunction
         });
 
         if (allocations.length !== ids.length) {
-            return res.status(404).json({ error: 'One or more allocations were not found on this node.' });
+            res.status(404).json({ error: 'One or more allocations were not found on this node.' });
+            return;
         }
 
         const assigned = allocations.filter((a) => a.server_id !== null);
         if (assigned.length > 0) {
-            return res.status(409).json({ error: 'Cannot delete allocations that are assigned to a server.' });
+            res.status(409).json({ error: 'Cannot delete allocations that are assigned to a server.' });
+            return;
         }
 
         await prisma.allocations.deleteMany({

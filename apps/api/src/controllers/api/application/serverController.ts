@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { prisma } from '../../../prisma/client.js';
 import { fractal } from '../../../serializers/fractal.js';
 import { ServerCreationService } from '../../../services/servers/serverCreationService.js';
@@ -106,12 +106,12 @@ export const store = async (req: Request, res: Response, next: NextFunction) => 
         const data = req.body;
 
         // Build deployment object if deployment data is provided
-        let deployment: { locations: unknown[]; dedicated: boolean; ports: unknown[] } | undefined;
+        let deployment: { locations: number[]; dedicated: boolean; ports: string[] } | undefined;
         if (data.deploy) {
             deployment = {
-                locations: data.deploy.locations || [],
-                dedicated: data.deploy.dedicated_ip || false,
-                ports: data.deploy.port_range || [],
+                locations: (data.deploy.locations || []).map(Number),
+                dedicated: Boolean(data.deploy.dedicated_ip),
+                ports: (data.deploy.port_range || []).map(String),
             };
         }
 

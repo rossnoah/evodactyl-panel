@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Request, Response } from '@/types/express.js';
 import { BadRequestHttpException, HttpForbiddenException } from '../../../../errors/index.js';
 import { prisma } from '../../../../prisma/client.js';
 import { activityFromRequest } from '../../../../services/activity/activityLogService.js';
@@ -44,7 +44,7 @@ export class BackupStatusController {
             data: {
                 is_successful: successful,
                 // Unlock failed backups so they can be deleted
-                is_locked: successful ? backup.is_locked : 0,
+                is_locked: successful ? backup.is_locked : false,
                 checksum: successful ? `${req.body.checksum_type}:${req.body.checksum}` : null,
                 bytes: successful ? parseInt(req.body.size, 10) || 0 : 0,
                 completed_at: new Date(),
@@ -52,7 +52,11 @@ export class BackupStatusController {
         });
 
         // Log the activity
-        await activityFromRequest(req).event(action).subject(backup, 'Backup').property('name', backup.name).log();
+        await activityFromRequest(req)
+            .event(action)
+            .subject({ id: Number(backup.id) }, 'Backup')
+            .property('name', backup.name)
+            .log();
 
         // Handle S3 multipart completion if applicable
         if (backup.disk === 's3' && backup.upload_id) {
@@ -93,7 +97,11 @@ export class BackupStatusController {
         const successful = Boolean(req.body.successful);
         const eventName = successful ? 'server:backup.restore-complete' : 'server:backup.restore-failed';
 
-        await activityFromRequest(req).event(eventName).subject(backup, 'Backup').property('name', backup.name).log();
+        await activityFromRequest(req)
+            .event(eventName)
+            .subject({ id: Number(backup.id) }, 'Backup')
+            .property('name', backup.name)
+            .log();
 
         res.status(204).json();
     }

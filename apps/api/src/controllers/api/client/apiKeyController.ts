@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from '@/types/express.js';
 import { DisplayException, NotFoundHttpException, ValidationException } from '../../../errors/index.js';
 import { prisma } from '../../../prisma/client.js';
 import { lockRowForUpdate } from '../../../prisma/locks.js';

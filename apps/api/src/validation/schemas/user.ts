@@ -14,7 +14,7 @@ interface StoreUserData {
     name_last: string;
     password?: string;
     language?: string;
-    root_admin?: boolean;
+    root_admin?: number;
 }
 
 interface UpdateUserData {
@@ -25,7 +25,7 @@ interface UpdateUserData {
     name_last?: string;
     password?: string;
     language?: string;
-    root_admin?: boolean;
+    root_admin?: number;
 }
 
 /**

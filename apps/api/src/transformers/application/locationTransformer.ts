@@ -58,7 +58,7 @@ export class LocationTransformer extends BaseTransformer {
             location.servers ??
             (await prisma.servers.findMany({
                 where: {
-                    node: {
+                    nodes: {
                         location_id: location.id,
                     },
                 },
