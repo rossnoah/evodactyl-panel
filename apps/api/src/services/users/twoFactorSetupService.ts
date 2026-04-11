@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { config } from '../../config/index.js';
 import { encrypt } from '../../lib/encryption.js';
 import { prisma } from '../../prisma/client.js';
+import { getAppName } from '../settings/resolvedConfig.js';
 
 const VALID_BASE32_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
@@ -31,7 +32,7 @@ export async function setupTwoFactor(user: any): Promise<{
         },
     });
 
-    const company = encodeURIComponent((config.app.name || 'Pterodactyl').replace(/\s/g, ''));
+    const company = encodeURIComponent(getAppName().replace(/\s/g, ''));
 
     const imageUrlData = `otpauth://totp/${encodeURIComponent(company)}:${encodeURIComponent(user.email)}?secret=${encodeURIComponent(secret)}&issuer=${encodeURIComponent(company)}`;
 

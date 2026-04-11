@@ -1,4 +1,5 @@
 import { config } from '../config/index.js';
+import { getAppName } from '../services/settings/resolvedConfig.js';
 
 /**
  * Account Created notification.
@@ -11,7 +12,7 @@ export async function sendAccountCreatedNotification(
     user: { email: string; username: string; name_first: string | null; name_last?: string | null },
     token: string | null = null,
 ): Promise<void> {
-    const appName = config.app.name || 'Pterodactyl';
+    const appName = getAppName();
     const appUrl = config.app.url || 'http://localhost';
 
     const name = (user.name_first ?? '') + (user.name_last ? ` ${user.name_last}` : '');

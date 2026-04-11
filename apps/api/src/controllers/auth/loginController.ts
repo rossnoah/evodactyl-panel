@@ -4,6 +4,7 @@ import { DisplayException } from '../../errors/index.js';
 import { verifyPassword } from '../../lib/password.js';
 import { prisma } from '../../prisma/client.js';
 import { activityFromRequest } from '../../services/activity/activityLogService.js';
+import { verifyRecaptcha } from '../../services/auth/recaptchaService.js';
 
 declare module 'express-session' {
     interface SessionData {
@@ -94,6 +95,12 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     try {
         if (hasTooManyAttempts(req)) {
             throw new DisplayException('Too many login attempts. Please try again later.', 429);
+        }
+
+        const captchaOk = await verifyRecaptcha(req.body?.['g-recaptcha-response'], req.ip);
+        if (!captchaOk) {
+            incrementAttempts(req);
+            throw new DisplayException('Captcha verification failed. Please try again.', 422);
         }
 
         const username = req.body?.user;

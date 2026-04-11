@@ -1,6 +1,6 @@
-import { config } from '../../config/index.js';
 import { DisplayException } from '../../errors/index.js';
 import { prisma } from '../../prisma/client.js';
+import { getAllocationRange } from '../settings/resolvedConfig.js';
 import { assignAllocations } from './assignmentService.js';
 
 /**
@@ -9,7 +9,7 @@ import { assignAllocations } from './assignmentService.js';
  * Mirrors app/Services/Allocations/FindAssignableAllocationService.php
  */
 export async function findAssignableAllocation(server: any): Promise<any> {
-    const allocationsConfig = config.pterodactyl.clientFeatures.allocations;
+    const allocationsConfig = getAllocationRange();
 
     if (!allocationsConfig.enabled) {
         throw new DisplayException('The auto-allocation feature is not enabled for this panel.', 400);
@@ -46,7 +46,7 @@ export async function findAssignableAllocation(server: any): Promise<any> {
 }
 
 async function createNewAllocation(server: any, ip: string): Promise<any> {
-    const allocationsConfig = config.pterodactyl.clientFeatures.allocations;
+    const allocationsConfig = getAllocationRange();
     const start = allocationsConfig.rangeStart;
     const end = allocationsConfig.rangeEnd;
 

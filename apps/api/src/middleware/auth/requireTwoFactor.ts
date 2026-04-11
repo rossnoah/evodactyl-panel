@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from '@/types/express.js';
-import { config } from '../../config/index.js';
 import { AccessDeniedHttpException } from '../../errors/index.js';
+import { getTwoFactorRequirement } from '../../services/settings/resolvedConfig.js';
 
 /**
  * Require two-factor authentication if the panel is configured to enforce it.
@@ -17,7 +17,7 @@ export function requireTwoFactor(req: Request, _res: Response, next: NextFunctio
         return next();
     }
 
-    const level = config.pterodactyl.auth.twoFactorRequired;
+    const level = getTwoFactorRequirement();
 
     // 2FA not required
     if (level === 0) {

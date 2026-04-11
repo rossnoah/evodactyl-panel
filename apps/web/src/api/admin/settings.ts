@@ -11,6 +11,14 @@ export interface PanelSettings {
     'mail:mailers:smtp:password'?: string;
     'mail:from:address'?: string;
     'mail:from:name'?: string;
+    'recaptcha:enabled'?: string;
+    'recaptcha:website_key'?: string;
+    'recaptcha:secret_key'?: string;
+    'pterodactyl:guzzle:connect_timeout'?: string;
+    'pterodactyl:guzzle:timeout'?: string;
+    'pterodactyl:client_features:allocations:enabled'?: string;
+    'pterodactyl:client_features:allocations:range_start'?: string;
+    'pterodactyl:client_features:allocations:range_end'?: string;
     [key: string]: string | undefined;
 }
 
@@ -26,6 +34,14 @@ export const updateSettings = (settings: PanelSettings): Promise<PanelSettings> 
     return new Promise((resolve, reject) => {
         http.patch('/api/application/settings', settings)
             .then(({ data }) => resolve(data.data || {}))
+            .catch(reject);
+    });
+};
+
+export const sendTestMail = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        http.post('/api/application/settings/mail/test')
+            .then(() => resolve())
             .catch(reject);
     });
 };

@@ -1,6 +1,6 @@
-import { config } from '../../config/index.js';
 import { DaemonConnectionException } from '../../errors/index.js';
 import { decrypt } from '../../lib/encryption.js';
+import { getGuzzleTimeouts } from '../../services/settings/resolvedConfig.js';
 
 /**
  * Base HTTP client for communicating with Wings daemon nodes.
@@ -61,7 +61,7 @@ export class DaemonRepository {
             url += `?${params.toString()}`;
         }
 
-        const timeout = (options.timeout ?? config.pterodactyl.guzzle.timeout) * 1000;
+        const timeout = (options.timeout ?? getGuzzleTimeouts().timeout) * 1000;
 
         try {
             const controller = new AbortController();

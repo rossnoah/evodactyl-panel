@@ -12,6 +12,12 @@ import { csrfProtection, errorHandler, setSecurityHeaders } from './middleware/i
 import { prisma } from './prisma/client.js';
 import routes from './routes/index.js';
 import { startScheduler } from './scheduler/index.js';
+import {
+    getAppLocale,
+    getAppName,
+    getRecaptchaConfig,
+} from './services/settings/resolvedConfig.js';
+import * as settingsCache from './services/settings/settingsCache.js';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -133,12 +139,13 @@ interface Bootstrap {
 
 async function loadBootstrap(req: Request): Promise<Bootstrap> {
     const csrfToken = req.session?.csrfToken ?? '';
+    const recaptcha = getRecaptchaConfig();
     const siteConfiguration = {
-        name: config.app.name,
-        locale: config.app.locale,
+        name: getAppName(),
+        locale: getAppLocale(),
         recaptcha: {
-            enabled: false,
-            siteKey: '',
+            enabled: recaptcha.enabled,
+            siteKey: recaptcha.siteKey,
         },
     };
 
@@ -263,6 +270,7 @@ const isMainModule = import.meta.main ?? (typeof Bun !== 'undefined' && Bun.main
 
 if (isMainModule) {
     const port = config.server.port;
+    await settingsCache.load();
     httpServer.listen(port, () => {
         console.log(`[Pterodactyl] Panel running on http://localhost:${port}`);
         console.log(`[Pterodactyl] Environment: ${config.app.env}${isDev ? ' (dev — Vite middleware + HMR)' : ''}`);

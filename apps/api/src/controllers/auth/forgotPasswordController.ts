@@ -1,7 +1,9 @@
 import crypto from 'node:crypto';
 import type { NextFunction, Request, Response } from '@/types/express.js';
+import { DisplayException } from '../../errors/index.js';
 import { sendPasswordResetNotification } from '../../notifications/sendPasswordReset.js';
 import { prisma } from '../../prisma/client.js';
+import { verifyRecaptcha } from '../../services/auth/recaptchaService.js';
 
 /**
  * Auth Forgot Password Controller.
@@ -16,6 +18,11 @@ import { prisma } from '../../prisma/client.js';
  */
 export async function sendResetLinkEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+        const captchaOk = await verifyRecaptcha(req.body?.['g-recaptcha-response'], req.ip);
+        if (!captchaOk) {
+            throw new DisplayException('Captcha verification failed. Please try again.', 422);
+        }
+
         const email = req.body?.email;
 
         if (!email || typeof email !== 'string') {

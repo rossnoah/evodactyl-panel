@@ -222,6 +222,7 @@ router.delete('/servers/:serverId/mounts/:mountId', async (req, res, next) => {
 // ---- Settings ----
 router.get('/settings', SettingsController.index);
 router.patch('/settings', SettingsController.update);
+router.post('/settings/mail/test', SettingsController.testMail);
 
 // ---- Mounts ----
 router.get('/mounts', MountController.index);

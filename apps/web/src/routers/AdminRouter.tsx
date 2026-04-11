@@ -17,7 +17,7 @@ import NodesContainer from '@/components/admin/nodes/NodesContainer';
 import NewServerContainer from '@/components/admin/servers/NewServerContainer';
 import ServerRouter from '@/components/admin/servers/ServerRouter';
 import ServersContainer from '@/components/admin/servers/ServersContainer';
-import SettingsContainer from '@/components/admin/settings/SettingsContainer';
+import SettingsRouter from '@/components/admin/settings/SettingsRouter';
 import NewUserContainer from '@/components/admin/users/NewUserContainer';
 import UserEditContainer from '@/components/admin/users/UserEditContainer';
 import UsersContainer from '@/components/admin/users/UsersContainer';
@@ -36,8 +36,8 @@ export default () => {
             <Route path={'/admin'} exact>
                 <AdminDashboard />
             </Route>
-            <Route path={'/admin/settings'} exact>
-                <SettingsContainer />
+            <Route path={'/admin/settings'}>
+                <SettingsRouter />
             </Route>
             <Route path={'/admin/users'} exact>
                 <UsersContainer />
