@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 #
-# Evodactyl Panel — interactive installer.
+# Evodactyl Panel — native installer.
+#
+# Installs the panel directly on the host with systemd, MariaDB, and Redis.
+# Supports Ubuntu 22.04+, Debian 12+, Rocky/Alma 9+, and RHEL 9+.
 #
 # Recommended usage: download first, then run.
 #
@@ -11,10 +14,6 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/Evodactyl/evodactyl-panel/main/scripts/install.sh | sudo bash
 #
-# It relies on reopening /dev/tty for interactive prompts, which can fail
-# under some sudo configs, SSH sessions without a controlling terminal, or
-# containers. The script detects that and prints a clear fallback.
-#
 # Environment overrides (optional):
 #   EVODACTYL_INSTALL_DIR   default /srv/evodactyl
 #   EVODACTYL_REPO          default https://github.com/Evodactyl/evodactyl-panel.git
@@ -23,17 +22,14 @@
 set -euo pipefail
 
 # Reopen stdin on the controlling TTY so `curl ... | sudo bash` still gets
-# interactive prompts. If /dev/tty can't be opened (sudo blocks it, no TTY
-# allocated, running under a CI runner, etc.), bail loudly with a fallback
-# instead of dying silently under `set -e`.
+# interactive prompts.
 if [ ! -t 0 ]; then
     if [ -e /dev/tty ] && exec < /dev/tty 2>/dev/null; then
         : # TTY reopened; interactive prompts will work
     else
         cat <<'TTY_FAIL' >&2
 ✗ This script needs an interactive terminal to prompt for configuration,
-  but stdin isn't a TTY and /dev/tty isn't accessible. That's common under
-  some sudo configs, SSH sessions without TTY allocation, or containers.
+  but stdin isn't a TTY and /dev/tty isn't accessible.
 
   Download the script and run it directly instead:
 
@@ -46,19 +42,49 @@ TTY_FAIL
 fi
 
 # ───── preflight ─────
-command -v docker >/dev/null             || { echo "✗ docker is required"; exit 1; }
-docker compose version >/dev/null 2>&1   || { echo "✗ docker compose v2 is required"; exit 1; }
-command -v openssl >/dev/null            || { echo "✗ openssl is required"; exit 1; }
-command -v git >/dev/null                || { echo "✗ git is required";     exit 1; }
-[ "$(id -u)" -eq 0 ]                     || { echo "✗ run as root (or via sudo)"; exit 1; }
+command -v openssl >/dev/null || { echo "✗ openssl is required"; exit 1; }
+command -v curl >/dev/null    || { echo "✗ curl is required";    exit 1; }
+[ "$(id -u)" -eq 0 ]          || { echo "✗ run as root (or via sudo)"; exit 1; }
 
 INSTALL_DIR="${EVODACTYL_INSTALL_DIR:-/srv/evodactyl}"
 REPO_URL="${EVODACTYL_REPO:-https://github.com/Evodactyl/evodactyl-panel.git}"
 REPO_BRANCH="${EVODACTYL_BRANCH:-main}"
+BUN_VERSION="1.3"
+
+# ───── OS detection ─────
+detect_os() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS_ID="${ID,,}"
+        OS_VERSION="${VERSION_ID%%.*}"
+    else
+        echo "✗ Cannot detect OS (no /etc/os-release). Supported: Ubuntu 22+, Debian 12+, Rocky/Alma/RHEL 9+"
+        exit 1
+    fi
+
+    case "$OS_ID" in
+        ubuntu)
+            [ "$OS_VERSION" -ge 22 ] || { echo "✗ Ubuntu 22.04+ required (found $VERSION_ID)"; exit 1; }
+            PKG_MANAGER="apt"
+            ;;
+        debian)
+            [ "$OS_VERSION" -ge 12 ] || { echo "✗ Debian 12+ required (found $VERSION_ID)"; exit 1; }
+            PKG_MANAGER="apt"
+            ;;
+        rocky|almalinux|rhel)
+            [ "$OS_VERSION" -ge 9 ] || { echo "✗ $NAME 9+ required (found $VERSION_ID)"; exit 1; }
+            PKG_MANAGER="dnf"
+            ;;
+        *)
+            echo "✗ Unsupported OS: $PRETTY_NAME"
+            echo "  Supported: Ubuntu 22+, Debian 12+, Rocky/Alma/RHEL 9+"
+            exit 1
+            ;;
+    esac
+}
 
 # ───── helpers ─────
 ask() {
-    # ask VAR "label" [default]
     local __var="$1" __label="$2" __default="${3:-}" __reply
     while :; do
         if [ -n "$__default" ]; then
@@ -74,7 +100,6 @@ ask() {
     done
 }
 ask_secret() {
-    # ask_secret VAR "label"
     local __var="$1" __label="$2" __a __b
     while :; do
         printf "  %s: " "$__label";    IFS= read -rs __a || __a=""; echo
@@ -92,7 +117,6 @@ ask_secret() {
     done
 }
 confirm() {
-    # confirm "label" [y|n]
     local __label="$1" __default="${2:-n}" __reply
     printf "  %s [%s/%s] " "$__label" \
         "$([ "$__default" = y ] && echo Y || echo y)" \
@@ -102,7 +126,174 @@ confirm() {
     case "$__reply" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
 
-# ───── detect defaults ─────
+# ───── package installation ─────
+install_packages_apt() {
+    echo "  → updating package lists"
+    apt-get update -qq
+
+    echo "  → installing system dependencies"
+    apt-get install -y -qq \
+        curl git unzip openssl \
+        mariadb-server redis-server \
+        nginx certbot python3-certbot-nginx \
+        > /dev/null
+
+    # Enable and start services
+    systemctl enable --now mariadb redis-server
+}
+
+install_packages_dnf() {
+    echo "  → installing system dependencies"
+    dnf install -y -q \
+        curl git unzip openssl \
+        mariadb-server redis \
+        nginx certbot python3-certbot-nginx \
+        > /dev/null
+
+    # Enable and start services
+    systemctl enable --now mariadb redis nginx
+}
+
+install_bun() {
+    if command -v bun >/dev/null 2>&1; then
+        local current_ver
+        current_ver=$(bun --version 2>/dev/null || echo "0.0.0")
+        echo "  → bun $current_ver already installed"
+    else
+        echo "  → installing bun"
+        curl -fsSL https://bun.sh/install | bash > /dev/null 2>&1
+        # Make bun available system-wide
+        if [ -f "$HOME/.bun/bin/bun" ]; then
+            ln -sf "$HOME/.bun/bin/bun" /usr/local/bin/bun
+            ln -sf "$HOME/.bun/bin/bunx" /usr/local/bin/bunx
+        fi
+    fi
+
+    # Verify bun is available
+    if ! command -v bun >/dev/null 2>&1; then
+        export PATH="$HOME/.bun/bin:$PATH"
+        if ! command -v bun >/dev/null 2>&1; then
+            echo "✗ bun installation failed"
+            exit 1
+        fi
+    fi
+    echo "  ✓ bun $(bun --version)"
+}
+
+# ───── database setup ─────
+setup_database() {
+    local db_name="panel"
+    local db_user="evodactyl"
+
+    echo "  → creating database and user"
+
+    mysql -u root <<SQL
+CREATE DATABASE IF NOT EXISTS \`${db_name}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${db_user}'@'127.0.0.1' IDENTIFIED BY '${DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON \`${db_name}\`.* TO '${db_user}'@'127.0.0.1' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+SQL
+
+    echo "  ✓ database '${db_name}' ready, user '${db_user}' granted"
+}
+
+# ───── systemd service ─────
+create_systemd_service() {
+    cat > /etc/systemd/system/evodactyl.service <<UNIT
+[Unit]
+Description=Evodactyl Panel
+After=network.target mariadb.service redis.service
+Requires=mariadb.service redis.service
+
+[Service]
+Type=simple
+User=evodactyl
+Group=evodactyl
+WorkingDirectory=${INSTALL_DIR}
+EnvironmentFile=${INSTALL_DIR}/.env
+ExecStart=/usr/local/bin/bun run apps/api/src/index.ts
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=${INSTALL_DIR}
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+    systemctl daemon-reload
+    echo "  ✓ systemd service created"
+}
+
+# ───── nginx config ─────
+create_nginx_config() {
+    local domain
+    domain=$(echo "$PANEL_URL" | sed -E 's#^[a-z]+://##; s#/.*##; s#:.*##')
+
+    cat > /etc/nginx/sites-available/evodactyl.conf <<NGINX
+server {
+    listen 80;
+    server_name ${domain};
+
+    location / {
+        proxy_pass http://127.0.0.1:${PANEL_PORT};
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_buffering off;
+        proxy_request_buffering off;
+
+        # WebSocket support
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+NGINX
+
+    # Enable the site
+    mkdir -p /etc/nginx/sites-enabled
+    ln -sf /etc/nginx/sites-available/evodactyl.conf /etc/nginx/sites-enabled/evodactyl.conf
+
+    # Remove default site if it exists
+    rm -f /etc/nginx/sites-enabled/default
+
+    # Test and reload nginx
+    nginx -t 2>/dev/null && systemctl reload nginx
+    echo "  ✓ nginx reverse proxy configured for ${domain}"
+}
+
+# ═════════════════════════════════════════════════════════════
+#  Main installation flow
+# ═════════════════════════════════════════════════════════════
+
+detect_os
+
+cat <<'BANNER'
+
+  ╔══════════════════════════════════════════╗
+  ║   Evodactyl Panel — native installer     ║
+  ╚══════════════════════════════════════════╝
+
+BANNER
+
+echo "  Detected: $PRETTY_NAME ($PKG_MANAGER)"
+echo
+
+# ───── gather configuration ─────
+echo "▶ Panel configuration"
+ask PANEL_URL      "Panel URL (https://panel.example.com)"
+ask PANEL_PORT     "Panel port" "8080"
+
+# Detect timezone
 if [ -r /etc/timezone ]; then
     DEFAULT_TZ=$(cat /etc/timezone)
 elif command -v timedatectl >/dev/null 2>&1; then
@@ -110,17 +301,6 @@ elif command -v timedatectl >/dev/null 2>&1; then
 else
     DEFAULT_TZ="UTC"
 fi
-
-cat <<'BANNER'
-
-  ╔══════════════════════════════════════╗
-  ║   Evodactyl Panel — one-paste install ║
-  ╚══════════════════════════════════════╝
-
-BANNER
-
-echo "▶ Panel configuration"
-ask PANEL_URL      "Panel URL (https://panel.example.com)"
 ask PANEL_TIMEZONE "Timezone" "$DEFAULT_TZ"
 
 echo
@@ -152,9 +332,32 @@ echo
 echo "▶ Generating secrets"
 APP_KEY="base64:$(openssl rand -base64 32)"
 DB_PASSWORD=$(openssl rand -hex 24)
-DB_ROOT_PASSWORD=$(openssl rand -hex 24)
-echo "  ✓ APP_KEY, DB_PASSWORD, DB_ROOT_PASSWORD"
+echo "  ✓ APP_KEY, DB_PASSWORD"
 
+# ───── install system packages ─────
+echo
+echo "▶ Installing system packages"
+case "$PKG_MANAGER" in
+    apt) install_packages_apt ;;
+    dnf) install_packages_dnf ;;
+esac
+echo "  ✓ MariaDB, Redis, Nginx installed"
+
+echo
+echo "▶ Installing Bun runtime"
+install_bun
+
+# ───── create system user ─────
+echo
+echo "▶ Creating evodactyl system user"
+if id evodactyl >/dev/null 2>&1; then
+    echo "  → user already exists"
+else
+    useradd --system --home-dir "$INSTALL_DIR" --shell /usr/sbin/nologin evodactyl
+    echo "  ✓ user created"
+fi
+
+# ───── clone source ─────
 echo
 echo "▶ Cloning Evodactyl source into ${INSTALL_DIR}"
 mkdir -p "$(dirname "$INSTALL_DIR")"
@@ -165,114 +368,132 @@ if [ -d "$INSTALL_DIR/.git" ]; then
 else
     git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$INSTALL_DIR"
 fi
-cd "$INSTALL_DIR"
-echo "  ✓ source at $INSTALL_DIR ($(git rev-parse --short HEAD))"
+echo "  ✓ source at $INSTALL_DIR ($(git -C "$INSTALL_DIR" rev-parse --short HEAD))"
 
+# ───── install dependencies ─────
 echo
-echo "▶ Writing docker-compose.yml + secrets"
-cat > docker-compose.yml <<YAML
-services:
-  database:
-    image: mariadb:11
-    restart: always
-    volumes:
-      - "./.evodactyl/database:/var/lib/mysql"
-    environment:
-      MYSQL_DATABASE: "panel"
-      MYSQL_USER: "evodactyl"
-      MYSQL_PASSWORD: "${DB_PASSWORD}"
-      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
+echo "▶ Installing application dependencies"
+cd "$INSTALL_DIR"
+bun install --production
+echo "  ✓ dependencies installed"
 
-  cache:
-    image: redis:7-alpine
-    restart: always
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 12
+# ───── build frontend ─────
+echo
+echo "▶ Building frontend"
+bunx prisma generate --schema=packages/db/prisma/schema.prisma
+bun run --filter=@evodactyl/web build
+echo "  ✓ frontend built"
 
-  panel:
-    # Build the image from this repo. Evodactyl does not publish pre-built
-    # images — you build your own from source. The first build takes a few
-    # minutes; subsequent runs are cached.
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: evodactyl/panel:local
-    restart: always
-    ports:
-      - "8080:8080"
-    depends_on:
-      database:
-        condition: service_healthy
-      cache:
-        condition: service_healthy
-    environment:
-      APP_ENV: "production"
-      APP_DEBUG: "false"
-      APP_NAME: "Evodactyl"
-      APP_URL: "${PANEL_URL}"
-      APP_TIMEZONE: "${PANEL_TIMEZONE}"
-      APP_KEY: "${APP_KEY}"
-      PORT: "8080"
-      DB_HOST: "database"
-      DB_PORT: "3306"
-      DB_DATABASE: "panel"
-      DB_USERNAME: "evodactyl"
-      DB_PASSWORD: "${DB_PASSWORD}"
-      DATABASE_URL: "mysql://evodactyl:${DB_PASSWORD}@database:3306/panel"
-      REDIS_HOST: "cache"
-      REDIS_PORT: "6379"
-      SESSION_DRIVER: "redis"
-      SESSION_COOKIE: "evodactyl_session"
-      HASHIDS_LENGTH: "8"
-      MAIL_HOST: "${MAIL_HOST}"
-      MAIL_PORT: "${MAIL_PORT}"
-      MAIL_USERNAME: "${MAIL_USERNAME}"
-      MAIL_PASSWORD: "${MAIL_PASSWORD}"
-      MAIL_ENCRYPTION: "tls"
-      MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS}"
-      MAIL_FROM_NAME: "Evodactyl Panel"
-YAML
-chmod 600 docker-compose.yml
+# ───── write .env ─────
+echo
+echo "▶ Writing configuration"
+cat > "${INSTALL_DIR}/.env" <<ENV
+# ── Core ──────────────────────────────────────────────
+APP_KEY=${APP_KEY}
+APP_URL=${PANEL_URL}
+APP_ENV=production
+APP_DEBUG=false
+APP_TIMEZONE=${PANEL_TIMEZONE}
+APP_LOCALE=en
+APP_NAME=Evodactyl
 
-mkdir -p .evodactyl
-cat > .evodactyl/secrets <<SECRETS
+PORT=${PANEL_PORT}
+
+# ── Database ──────────────────────────────────────────
+DATABASE_URL=mysql://evodactyl:${DB_PASSWORD}@127.0.0.1:3306/panel
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=panel
+DB_USERNAME=evodactyl
+DB_PASSWORD=${DB_PASSWORD}
+
+# ── Redis ─────────────────────────────────────────────
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+# ── Sessions ──────────────────────────────────────────
+SESSION_DRIVER=redis
+SESSION_COOKIE=evodactyl_session
+
+# ── Hashids ───────────────────────────────────────────
+HASHIDS_LENGTH=8
+
+# ── Mail ──────────────────────────────────────────────
+MAIL_HOST=${MAIL_HOST}
+MAIL_PORT=${MAIL_PORT}
+MAIL_USERNAME=${MAIL_USERNAME}
+MAIL_PASSWORD=${MAIL_PASSWORD}
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+MAIL_FROM_NAME="Evodactyl Panel"
+ENV
+
+chmod 640 "${INSTALL_DIR}/.env"
+
+# Save secrets separately for backup reference
+mkdir -p "${INSTALL_DIR}/.evodactyl"
+cat > "${INSTALL_DIR}/.evodactyl/secrets" <<SECRETS
 # Evodactyl install secrets — BACK THESE UP off-host.
 # Losing APP_KEY makes every encrypted column in the database unrecoverable.
 APP_KEY=${APP_KEY}
 DB_PASSWORD=${DB_PASSWORD}
-DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
 SECRETS
-chmod 600 .evodactyl/secrets
-echo "  ✓ docker-compose.yml (mode 600)"
-echo "  ✓ .evodactyl/secrets (mode 600)"
+chmod 600 "${INSTALL_DIR}/.evodactyl/secrets"
+
+echo "  ✓ .env written (mode 640)"
+echo "  ✓ .evodactyl/secrets written (mode 600)"
+
+# ───── set ownership ─────
+chown -R evodactyl:evodactyl "$INSTALL_DIR"
+
+# ───── setup database ─────
+echo
+echo "▶ Setting up database"
+setup_database
 
 echo
-echo "▶ Building the panel image (this takes a few minutes on first run)"
-docker compose build panel
+echo "▶ Running database migrations"
+cd "$INSTALL_DIR"
+sudo -u evodactyl bun run --filter=@evodactyl/db migrate
+echo "  ✓ migrations complete"
 
 echo
-echo "▶ Pulling database and cache images"
-docker compose pull database cache
+echo "▶ Seeding default nests and eggs"
+sudo -u evodactyl bun run --filter=@evodactyl/api cli seed
+echo "  ✓ seeded"
 
 echo
-echo "▶ Starting stack"
-docker compose up -d
+echo "▶ Creating the first admin user"
+sudo -u evodactyl bun run --filter=@evodactyl/api cli user:make \
+    --email="$ADMIN_EMAIL" \
+    --username="$ADMIN_USERNAME" \
+    --name-first="$ADMIN_FIRST" \
+    --name-last="$ADMIN_LAST" \
+    --password="$ADMIN_PASSWORD" \
+    --admin=true
+
+# ───── systemd + nginx ─────
+echo
+echo "▶ Configuring systemd service"
+create_systemd_service
 
 echo
-echo "▶ Waiting for the panel to become healthy"
+echo "▶ Configuring Nginx reverse proxy"
+create_nginx_config
+
+# ───── start the panel ─────
+echo
+echo "▶ Starting Evodactyl"
+systemctl enable --now evodactyl
+
+# Wait for health
+echo -n "  waiting for health check"
 tries=0
-until docker compose exec -T panel bun -e 'fetch("http://127.0.0.1:8080/api/health").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))' >/dev/null 2>&1; do
+until curl -sf "http://127.0.0.1:${PANEL_PORT}/api/health" >/dev/null 2>&1; do
     tries=$((tries + 1))
-    if [ "$tries" -gt 60 ]; then
-        echo "  ✗ panel did not become healthy; check: docker compose logs panel"
+    if [ "$tries" -gt 30 ]; then
+        echo
+        echo "  ✗ panel did not become healthy; check: journalctl -u evodactyl"
         exit 1
     fi
     printf '.'
@@ -281,42 +502,44 @@ done
 echo
 echo "  ✓ healthy"
 
+# ───── SSL prompt ─────
 echo
-echo "▶ Running database migrations"
-docker compose exec -T panel bun run --filter=@evodactyl/db migrate
-
-echo
-echo "▶ Seeding default nests and eggs"
-docker compose exec -T panel bun run --filter=@evodactyl/api cli seed
-
-echo
-echo "▶ Creating the first admin user"
-docker compose exec -T panel bun run --filter=@evodactyl/api cli user:make \
-    --email="$ADMIN_EMAIL" \
-    --username="$ADMIN_USERNAME" \
-    --name-first="$ADMIN_FIRST" \
-    --name-last="$ADMIN_LAST" \
-    --password="$ADMIN_PASSWORD" \
-    --admin=true
+DOMAIN=$(echo "$PANEL_URL" | sed -E 's#^[a-z]+://##; s#/.*##; s#:.*##')
+if confirm "Set up Let's Encrypt SSL for ${DOMAIN}?" y; then
+    certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email || {
+        echo "  ⚠ certbot failed — you can retry later with: certbot --nginx -d ${DOMAIN}"
+    }
+fi
 
 cat <<DONE
 
   ════════════════════════════════════════════
-   ✓ Evodactyl is running
+   ✓ Evodactyl is running natively
 
    Panel URL:    ${PANEL_URL}
    Admin login:  ${ADMIN_USERNAME}
-   Install dir:  ${INSTALL_DIR}  ← git checkout (edit files here, re-run build)
-   Secrets:      ${INSTALL_DIR}/.evodactyl/secrets  ← BACK THIS UP off-host
+   Install dir:  ${INSTALL_DIR}
 
-   Next steps:
-     1. Put a reverse proxy (nginx/Caddy/Apache) in front of :8080 and terminate TLS.
-     2. Install Wings on a node host and pair it with this panel.
-     3. To update later: cd ${INSTALL_DIR} && git pull && docker compose up -d --build
+   Services:
+     Panel:    systemctl {start|stop|restart|status} evodactyl
+     MariaDB:  systemctl {start|stop|restart|status} mariadb
+     Redis:    systemctl {start|stop|restart|status} redis-server
+     Nginx:    systemctl {start|stop|restart|status} nginx
+     Logs:     journalctl -u evodactyl -f
+
+   Secrets:    ${INSTALL_DIR}/.evodactyl/secrets  ← BACK THIS UP off-host
+
+   To update later:
+     cd ${INSTALL_DIR}
+     sudo git pull
+     sudo -u evodactyl bun install --production
+     sudo -u evodactyl bun run --filter=@evodactyl/web build
+     sudo -u evodactyl bun run --filter=@evodactyl/db migrate
+     sudo systemctl restart evodactyl
 
    CRITICAL: APP_KEY is the encryption key for every encrypted column in the
    database. Copy ${INSTALL_DIR}/.evodactyl/secrets somewhere safe NOW.
-   Losing it is unrecoverable — not even a database backup can restore encrypted data.
+   Losing it is unrecoverable.
   ════════════════════════════════════════════
 
 DONE

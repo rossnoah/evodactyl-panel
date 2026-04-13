@@ -19,18 +19,19 @@ crontab — the panel is one Bun process.
 
 ## Install
 
-On a fresh Linux host with Docker installed, download the installer and run it:
+On a fresh Linux host (Ubuntu 22+, Debian 12+, Rocky/Alma/RHEL 9+), download the installer and run it:
 
 ```bash
 curl -fsSL -o install.sh https://raw.githubusercontent.com/Evodactyl/evodactyl-panel/main/scripts/install.sh
 sudo bash install.sh
 ```
 
-It prompts you for a panel URL, an admin account, and optional SMTP, then clones this repo, builds
-the panel image from source, brings up a MariaDB + Redis + panel stack, runs migrations, seeds
-default eggs, and creates your first admin user. See the
-[install docs](https://evodactyl.github.io/evodactyl-panel/start/) for the script's prerequisites
-and what it creates.
+The installer runs natively on the host — no Docker required for the panel itself. It installs
+Bun, MariaDB, Redis, and Nginx, then clones this repo, builds the frontend, runs migrations,
+seeds default eggs, creates your first admin user, and sets up a systemd service. The panel runs
+as a single `bun` process behind an Nginx reverse proxy with optional Let's Encrypt SSL.
+
+See the [install docs](https://evodactyl.github.io/evodactyl-panel/start/) for full details.
 
 ## Documentation
 
