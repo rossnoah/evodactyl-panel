@@ -162,10 +162,11 @@ install_bun() {
     else
         echo "  → installing bun"
         curl -fsSL https://bun.sh/install | bash > /dev/null 2>&1
-        # Make bun available system-wide
+        # Make bun available system-wide. Copy rather than symlink so it's
+        # readable by other users (the install dir is in root's $HOME).
         if [ -f "$HOME/.bun/bin/bun" ]; then
-            ln -sf "$HOME/.bun/bin/bun" /usr/local/bin/bun
-            ln -sf "$HOME/.bun/bin/bunx" /usr/local/bin/bunx
+            install -m 0755 "$HOME/.bun/bin/bun" /usr/local/bin/bun
+            ln -sf /usr/local/bin/bun /usr/local/bin/bunx
         fi
     fi
 
